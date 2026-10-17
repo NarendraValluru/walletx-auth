@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class WalletXController {
 
     @GetMapping("/welcome")
-    public String welcome(){
+    public String welcome() {
         return "Welcome Spring Security";
     }
 }
