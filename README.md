@@ -79,3 +79,13 @@ Under `com.example.walletxbackend`:
 - `exception`: centralized API error handling (`AuthErrors`).
 
 See the workspace root README for the two-module Maven build, IntelliJ setup, and auth schema migration details. Install backend-util or import the root Maven aggregator before building this service alone.
+
+## Private finance introspection endpoint
+
+`POST /api/v1/internal/token/introspect` accepts form-urlencoded `token=<accessToken>` and requires HTTP Basic credentials for the configured walletx-finance service client. It is protected by a separate Spring Security chain. A user's JWT cannot authenticate this endpoint. Public registration/login/refresh endpoints retain their existing behavior.
+
+The endpoint reuses auth's JwtDecoder and database session/role validation. Invalid, expired and revoked access tokens return 200 with `{"active":false}`. Active tokens return validated claims (sub, roles, iss, aud, exp, iat), never password/refresh-token hashes. Responses use no-store. Access tokens are not issued by introspection.
+
+For local setup, run `..\walletx-finance\configure-auth-link.ps1` after cloning both applications. It writes a matching random service credential to each project's Git-ignored `.local/service-client.properties`. Both services accept WALLETX_INTROSPECTION_CLIENT_ID and WALLETX_INTROSPECTION_CLIENT_SECRET environment overrides. Restart both services after configuration changes. Missing/short credentials fail startup instead of enabling a public introspection endpoint.
+
+This is a private token-validation endpoint, not a full OAuth authorization-server implementation. Use HTTPS and private network restrictions outside localhost. Finance does not get auth's JWT signing key or access to auth tables.

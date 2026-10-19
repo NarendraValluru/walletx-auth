@@ -7,6 +7,7 @@ import java.net.http.*;
 import java.util.*;
 import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT, properties={
+ "walletx.introspection.client-secret=integration-test-service-secret-at-least-32-characters",
  "spring.flyway.enabled=false",
  "spring.jpa.hibernate.ddl-auto=create-drop",
  "spring.jpa.properties.hibernate.hbm2ddl.create_namespaces=true",
@@ -31,6 +32,32 @@ class WalletxBackendApplicationTests {
  }
  String field(String json,String key) { var m=java.util.regex.Pattern.compile("\""+key+"\":\"([^\"]+)\"").matcher(json); assertTrue(m.find(),json); return m.group(1); }
  String credentials(String email,String password) { return "{\"email\":\""+email+"\",\"password\":\""+password+"\"}"; }
+ HttpResponse<String> introspect(String token,String basicCredentials) throws Exception {
+  var b=HttpRequest.newBuilder(URI.create("http://localhost:"+port+"/api/v1/internal/token/introspect"))
+   .header("Content-Type","application/x-www-form-urlencoded");
+  if(basicCredentials!=null) b.header("Authorization","Basic "+Base64.getEncoder().encodeToString(basicCredentials.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+  return client.send(b.POST(HttpRequest.BodyPublishers.ofString("token="+URLEncoder.encode(token,java.nio.charset.StandardCharsets.UTF_8))).build(),HttpResponse.BodyHandlers.ofString());
+ }
+ @Test void introspectionIsPrivateAndTracksRevocation() throws Exception {
+  String c=credentials("introspection@example.com","correct-password-123");
+  assertEquals(201,request("POST","/api/v1/auth/register",c,null).statusCode());
+  var login=request("POST","/api/v1/auth/login",c,null);
+  String token=field(login.body(),"accessToken");
+  String service="walletx-finance:integration-test-service-secret-at-least-32-characters";
+  assertEquals(401,introspect(token,null).statusCode());
+  assertEquals(401,introspect(token,"walletx-finance:wrong-secret").statusCode());
+  assertEquals(401,request("POST","/api/v1/internal/token/introspect","{}",token).statusCode());
+  var active=introspect(token,service); assertEquals(200,active.statusCode());
+  assertTrue(active.body().contains("\"active\":true"));
+  assertTrue(active.body().contains("\"roles\":[\"USER\"]"));
+  assertFalse(active.body().contains("password")); assertFalse(active.body().contains("refreshHash"));
+  assertEquals("no-store",active.headers().firstValue("Cache-Control").orElse(""));
+  var inactive=introspect("not-a-jwt",service); assertEquals(200,inactive.statusCode());
+  assertEquals("{\"active\":false}",inactive.body());
+  assertEquals("{\"active\":false}",introspect(field(login.body(),"refreshToken"),service).body());
+  assertEquals(204,request("POST","/api/v1/auth/logout",null,token).statusCode());
+  assertEquals("{\"active\":false}",introspect(token,service).body());
+ }
  @Test void lifecycleAndAuthorization() throws Exception {
   String c=credentials("User@example.com","correct-password-123");
   assertEquals(401,request("GET","/welcome",null,null).statusCode());
