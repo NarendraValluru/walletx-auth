@@ -1,6 +1,6 @@
 package com.example.walletxbackend.repository;
 
-import com.example.backendutil.entity.AuthSessionEntity;
+import com.example.backendutil.auth.AuthSessionEntity;
 import org.springframework.data.jpa.repository.*;
 import jakarta.persistence.LockModeType;
 

@@ -1,8 +1,8 @@
 package com.example.walletxbackend.service;
 import com.example.walletxbackend.repository.UserRepository;
 import com.example.walletxbackend.repository.SessionRepository;
-import com.example.backendutil.entity.AuthUserEntity;
-import com.example.backendutil.entity.AuthSessionEntity;
+import com.example.backendutil.auth.AuthUserEntity;
+import com.example.backendutil.auth.AuthSessionEntity;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
