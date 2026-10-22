@@ -43,8 +43,10 @@ public class AuthService {
     }
 
     @Transactional
-    public Profile register(Credentials c) {
-        var u = users.saveAndFlush(new AuthUserEntity(normalize(c.email()), passwords.encode(c.password())));
+    public Profile register(Registration c) {
+        var entity = new AuthUserEntity(normalize(c.email()), passwords.encode(c.password()));
+        entity.setFullName(c.fullName().strip());
+        var u = users.saveAndFlush(entity);
         return profile(u);
     }
 
@@ -88,6 +90,11 @@ public class AuthService {
         sessions.lockById(sessionId).ifPresent(s -> s.setRevoked(true));
     }
 
+    @Transactional
+    public void logoutByRefresh(String token) {
+        sessions.lockByRefreshHash(hash(token)).ifPresent(s -> s.setRevoked(true));
+    }
+
     public Profile me(UUID userId) {
         return profile(users.findById(userId).orElseThrow(AuthService::invalid));
     }
@@ -100,7 +107,7 @@ public class AuthService {
     }
 
     private static Profile profile(AuthUserEntity u) {
-        return new Profile(u.getId(), u.getEmail(), u.getRole());
+        return new Profile(u.getId(), u.getEmail(), u.getRole(), u.getFullName());
     }
 
     private static String normalize(String email) {

@@ -19,7 +19,7 @@ public class AuthController {
     private final AuthService service;
 
     @PostMapping("/register")
-    public ResponseEntity<Profile> register(@Valid @RequestBody Credentials c) {
+    public ResponseEntity<Profile> register(@Valid @RequestBody Registration c) {
         return ResponseEntity.status(201).body(service.register(c));
     }
 

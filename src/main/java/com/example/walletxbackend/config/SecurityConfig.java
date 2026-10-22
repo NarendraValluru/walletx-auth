@@ -63,16 +63,27 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain security(HttpSecurity http) throws Exception {
+    SecurityFilterChain security(HttpSecurity http,
+            @Value("${walletx.auth.browser.secure-cookie:false}") boolean secureCookie) throws Exception {
         var roles = new JwtGrantedAuthoritiesConverter();
         roles.setAuthoritiesClaimName("roles");
         roles.setAuthorityPrefix("ROLE_");
         var converter = new JwtAuthenticationConverter();
         converter.setJwtGrantedAuthoritiesConverter(roles);
-        return http.csrf(c -> c.disable())
+        var csrfRepository=new org.springframework.security.web.csrf.CookieCsrfTokenRepository();
+        csrfRepository.setCookieCustomizer(c -> c.httpOnly(true).secure(secureCookie).sameSite("Lax").path("/"));
+        return http.csrf(c -> c.csrfTokenRepository(csrfRepository)
+                        .ignoringRequestMatchers(request -> !request.getServletPath().startsWith("/api/v1/auth/browser/"))
+                        .withObjectPostProcessor(new org.springframework.security.config.ObjectPostProcessor<org.springframework.security.web.csrf.CsrfFilter>() {
+                            @Override public <O extends org.springframework.security.web.csrf.CsrfFilter> O postProcess(O filter) {
+                                filter.setAccessDeniedHandler((request,response,failure) -> response.setStatus(403));
+                                return filter;
+                            }
+                        }))
                 .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(a -> a
                         .requestMatchers(org.springframework.http.HttpMethod.POST, "/api/v1/auth/register", "/api/v1/auth/login", "/api/v1/auth/refresh").permitAll()
+                        .requestMatchers("/api/v1/auth/browser/**").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())

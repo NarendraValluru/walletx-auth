@@ -12,4 +12,8 @@ public interface UserRepository extends JpaRepository<AuthUserEntity, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select u from AuthUser u where u.email = :email")
     Optional<AuthUserEntity> lockByEmail(String email);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select u from AuthUser u where u.resetTokenHash = :hash")
+    Optional<AuthUserEntity> lockByResetTokenHash(String hash);
 }

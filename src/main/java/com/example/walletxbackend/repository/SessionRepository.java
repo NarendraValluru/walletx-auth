@@ -14,4 +14,8 @@ public interface SessionRepository extends JpaRepository<AuthSessionEntity, UUID
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select s from AuthSession s where s.id = :id")
     Optional<AuthSessionEntity> lockById(UUID id);
+
+    @Modifying
+    @Query("update AuthSession s set s.revoked = true where s.userId = :userId and s.revoked = false")
+    int revokeAllByUserId(UUID userId);
 }

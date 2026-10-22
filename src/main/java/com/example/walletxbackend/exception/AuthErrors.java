@@ -8,6 +8,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 
 @RestControllerAdvice
 public class AuthErrors {
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    ResponseEntity<ProblemDetail> status(org.springframework.web.server.ResponseStatusException failure) {
+        return error(failure.getStatusCode().value(), failure.getReason());
+    }
     @ExceptionHandler(BadCredentialsException.class)
     ResponseEntity<ProblemDetail> credentials() {
         return error(401, "Invalid credentials or session");
@@ -20,7 +24,7 @@ public class AuthErrors {
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
     ResponseEntity<ProblemDetail> validation() {
-        return error(400, "Invalid request. Use a valid email and a 12-72 character ASCII password; refresh tokens must be 43 characters.");
+        return error(400, "Invalid request. Registration requires a full name (maximum 120 characters). Use a valid email and a 12-72 character ASCII password; reset and refresh tokens must be 43 characters.");
     }
 
     private ResponseEntity<ProblemDetail> error(int status, String detail) {
